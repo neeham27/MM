@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reservation Confirmation</title>
+  <link rel="stylesheet" href="../../static/css/styles.css" async>
+</head>
+<body>
+  <main>
+    <div style="text-align: center; margin: 2rem 0;">
+      <h3>Reservation Details:</h3>
+      <ul id="reservation-details" style="list-style: none; padding: 0;">
+        <!-- Reservation details will be dynamically inserted here -->
+      </ul>
+    </div>
+    <div style="text-align: center;">
+      <h3>Your QR Code:</h3>
+      <img id="qr-code" alt="QR Code" style="max-width: 200px; width: 100%; height: auto;" />
+      <p style="margin-top: 1rem; font-size: 0.9rem; color: #555;">Show this QR code at the cafeteria to access your reservation.</p>
+    </div>
+    <div style="text-align: center; margin-top: 2rem;">
+      <!-- Cancel Reservation Button -->
+      <button id="cancel-reservation-btn" style="max-width: 200px; margin-right: 1rem;">Cancel Reservation</button>
+      <a href="/dashboard/{{ emp_id }}" style="text-decoration: none; color: #fff;">
+        <button style="max-width: 200px;">Go to Dashboard</button>
+      </a>
+    </div>
+  </main>
+  <footer>© 2025 Blu-Reserve</footer>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const reservationId = window.location.pathname.split('/').pop();  // Get reservation_id from URL
+
+      fetch(`/reservation/details/${reservationId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "Reservation not found") {
+          alert("Reservation not found!");
+          return;
+        }
+
+        // Fill reservation details
+        const detailsList = document.getElementById('reservation-details');
+        detailsList.innerHTML = `
+          <li><strong>Reservation ID:</strong> ${data.reservation_id}</li>
+          <li><strong>Date:</strong> ${data.date}</li>
+          <li><strong>Time:</strong> ${data.time}</li>
+          <li><strong>Seats:</strong> ${((data.seats).sort(function(a,b){return a-b})).join(', ')}</li>
+          <li><strong>Number of Slots:</strong> ${data.num_slots}</li>
+        `;
+
+        // Set QR code image
+        const qrCodeImg = document.getElementById('qr-code');
+        qrCodeImg.src = data.qr_code_url;
+      })
+      .catch(error => console.error("Error fetching reservation details:", error));
+
+      // Add event listener to cancel reservation button
+      const cancelButton = document.getElementById("cancel-reservation-btn");
+      cancelButton.addEventListener("click", function() {
+        const userConfirmation = confirm("Are you sure you want to cancel this reservation?");
+        
+        if (userConfirmation) {
+          fetch("/seats/cancellation", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ reservation_id: (reservationId) })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.status) {
+              alert("Reservation successfully cancelled.");
+              // Optionally, redirect to a different page or update the UI
+              window.location.href = "/dashboard/{{ emp_id }}";  // Redirect to dashboard
+            } else {
+              alert("Failed to cancel the reservation. Please try again.");
+            }
+          })
+          .catch(error => console.error("Error cancelling reservation:", error));
+        }
+      });
+    });
+  </script>
+</body>
+</html>

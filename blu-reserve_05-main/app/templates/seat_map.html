@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select Seats</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    h1, h2 {
+      margin: 20px 0;
+    }
+    .floor {
+      margin: 30px 0;
+    }
+    .tables {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 50px;
+    }
+    .table-container {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .table {
+      width: 80px;
+      height: 80px;
+      background-color: lightblue; /* Brown for the table */
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .chair {
+      width: 40px;
+      height: 40px;
+      background-color: #4CAF50; /* Green for available chairs */
+      border: 1px solid #ddd;
+      position: absolute;
+      cursor: pointer;
+    }
+    .chair.taken {
+      background-color: #ccc; /* Gray for taken chairs */
+      cursor: not-allowed;
+    }
+    .chair.selected {
+      background-color: #FF5722; /* Orange for selected chairs */
+    }
+    .chair.top {
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .chair.bottom {
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .chair.left {
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .chair.right {
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .legend {
+      margin-top: 20px;
+    }
+    .legend div {
+      display: inline-block;
+      margin: 0 15px;
+    }
+    .box {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 5px;
+    }
+    .confirm-section {
+      margin-top: 30px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #1976D2;
+    }
+  </style>
+</head>
+<body>
+  <h1>Select your seats</h1>
+  <!-- Floors will be dynamically populated -->
+  <div id="floors"></div>
+
+  <!-- Legends -->
+  <div class="legend">
+    <div><span class="box" style="background-color: #4CAF50;"></span> Available</div>
+    <div><span class="box" style="background-color: #ccc;"></span> Taken</div>
+    <div><span class="box" style="background-color: #FF5722;"></span> Selected</div>
+  </div>
+
+  <!-- Confirm Section -->
+  <div class="confirm-section">
+    <button id="confirmButton">Confirm</button>
+    <p id="selectedCount">Seats selected: 0</p>
+    <p id="selectedIds">Selected Chair IDs: None</p>
+  </div>
+
+  <script>
+    const empId = "{{ emp_id }}";  // Flask will dynamically insert this value
+    const date = new URLSearchParams(window.location.search).get('date');
+    const time = new URLSearchParams(window.location.search).get('time');
+    const numSlots = new URLSearchParams(window.location.search).get('num_slots');
+
+    const totalChairs = 100;
+    const floors = ["floor1", "floor2", "floor3"];
+    const tablesPerFloor = Math.floor(totalChairs / floors.length / 4); // Number of tables per floor
+    const remainingChairs = totalChairs % (floors.length * 4); // Extra chairs
+
+    // Fetch available seats from the backend
+    fetch(`/seats/available?date=${date}&time=${time}&number_of_slots=${numSlots}`)
+      .then(response => response.json())
+      .then(availableSeats => {
+        // Setup floors and tables
+        let chairId = 1;
+        floors.forEach((floor, index) => {
+          const container = document.createElement('div');
+          container.classList.add("floor");
+          const floorTitle = document.createElement('h2');
+          floorTitle.innerText = `Floor ${index + 1}`;
+          container.appendChild(floorTitle);
+          const tableContainer = document.createElement("div");
+          tableContainer.classList.add("tables");
+          const numTables = index === floors.length - 1 ? tablesPerFloor + Math.ceil(remainingChairs / 4) : tablesPerFloor;
+          
+          for (let t = 0; t < numTables; t++) {
+            const tableDiv = document.createElement('div');
+            tableDiv.classList.add('table-container');
+            const table = document.createElement('div');
+            table.classList.add('table');
+            tableDiv.appendChild(table);
+
+            // Create 4 chairs around the table
+            ["top", "right", "bottom", "left"].forEach(position => {
+              if (chairId > totalChairs) return;  // Stop if more than total chairs
+              const chair = document.createElement('div');
+              chair.classList.add('chair', position);
+              chair.dataset.id = chairId;
+              
+              // Disable chairs that are already reserved
+              if (!availableSeats.includes(chairId)) {
+                chair.classList.add('taken');
+              }
+              
+              tableDiv.appendChild(chair);
+              chairId++;
+            });
+            tableContainer.appendChild(tableDiv);
+          }
+          container.appendChild(tableContainer);
+          document.getElementById("floors").appendChild(container);
+        });
+      });
+
+    // Handle chair selection
+    let selectedSeats = [];
+    document.getElementById("floors").addEventListener('click', event => {
+      const chair = event.target.closest('.chair');
+      if (!chair || chair.classList.contains('taken')) return;  // Ignore taken seats
+
+      const chairId = parseInt(chair.dataset.id);
+      const index = selectedSeats.indexOf(chairId.toString());
+
+      // Toggle selection
+      if (index === -1) {
+        // Chair is not selected, add to selected list
+        selectedSeats.push(chairId.toString());
+        chair.classList.add('selected');
+      } else {
+        // Chair is already selected, remove from selected list
+        selectedSeats.splice(index, 1);
+        chair.classList.remove('selected');
+      }
+
+      // Update selection count and chair IDs
+      document.getElementById("selectedCount").innerText = `Seats selected: ${selectedSeats.length}`;
+      document.getElementById("selectedIds").innerText = `Selected Chair IDs: ${selectedSeats.join(", ")}`;
+    });
+
+    // Handle confirmation
+    document.getElementById("confirmButton").addEventListener('click', () => {
+      if (selectedSeats.length === 0) {
+        alert("Please select at least one seat.");
+        return;
+      }
+      const data = {
+        emp_id: empId,
+        seat_ids: selectedSeats,
+        date: date,
+        time: time,
+        number_of_slots: numSlots
+      };
+      
+      // Send selected seats back to backend
+      fetch(`/seats/reservation/${empId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status) {
+          alert("Reservation successful!");
+          window.location.href = `/confirmation/${empId}/${data.reservation_id}`;  // Redirect to confirmation page
+        } else {
+          alert("Reservation failed. Please try again.");
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert("Reservation failed. Please try again.");
+      });
+    });
+  </script>
+</body>
+</html>

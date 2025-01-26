@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reserve a Seat</title>
+  <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+  <header>Reserve Your Seat</header>
+  <main>
+    <h1>Book Your Cafeteria Seat</h1>
+    <form id="reservationForm">
+      <label for="date">Select Date:</label>
+      <input type="date" name="date" id="date" required />
+      <label for="time">Select Time:</label>
+      <input type="time" name="time" id="time" required />
+      <label for="num_slots">Number of Slots:</label>
+      <input type="number" name="num_slots" id="num_slots" min="1" required />
+      <button type="button" onclick="selectSeats()">Select Seats</button>
+    </form>
+  </main>
+  <footer>© 2025 Blu-Reserve</footer>
+
+  <script>
+    const empId = "{{ emp_id }}";  // Flask will dynamically insert this value
+
+    // Redirect to seat map page with date, time, and number of slots
+    function selectSeats() {
+      const date = document.getElementById("date").value;
+      const time = document.getElementById("time").value;
+      const numSlots = document.getElementById("num_slots").value;
+
+      // Check if the required fields are filled
+      if (!date || !time || !numSlots) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      // Redirect to seat selection page with the selected date, time, and slots
+      window.location.href = `/seat_map/${empId}?date=${date}&time=${time}&num_slots=${numSlots}`;
+    }
+  </script>
+</body>
+</html>

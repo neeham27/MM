@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employee Dashboard</title>
+  <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+  <header>Employee Dashboard</header>
+  <main>
+    <h1>Upcoming Reservations</h1>
+    <div id="reservations-list">
+      <!-- Buttons will be appended here dynamically -->
+    </div>
+    <button type="button" onclick="window.location.href='/reserve'" style="background: #000;color:rgb(243, 197, 182)">Reserve a New Seat</button>
+    <!-- Manager Button, initially hidden -->
+    <button id="manager-button" style="background: #000;color:rgb(243, 197, 182);display:none;">
+    Go to Manager Dashboard
+  </button>
+  </main>
+  <footer>© 2025 Blu-Reserve</footer>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const empId = new URL(window.location.href).pathname.split('/')[2];  // Get emp_id from URL
+      const reservationsList = document.getElementById("reservations-list");
+      const managerButton = document.getElementById("manager-button");
+  
+      // Set the manager button's onclick dynamically
+      managerButton.onclick = function() {
+        window.location.href = `/manager/${empId}`;
+      };
+  
+      // Check if the employee is a manager
+      fetch(`/employee/is_manager?emp_id=${empId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.is_manager) {
+            managerButton.style.display = 'block';
+          }
+        })
+        .catch(error => console.error("Error checking manager status:", error));
+  
+      // Get current date and time for comparison
+      const currentDateTime = new Date();
+  
+      // Fetch reservations for the employee
+      fetch(`/seats/reservation?emp_id=${empId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('API Data:', data);
+  
+          data.forEach(reservation => {
+            // Combine reservation date and time into a single Date object
+            const reservationDateTime = new Date(`${reservation.date}T${reservation.time}`);
+  
+            // Check if the reservation is in the future
+            if (reservationDateTime > currentDateTime) {
+              const button = document.createElement("button");
+              button.innerHTML = `Date: ${reservation.date} | Time: ${reservation.time} | Slots: ${reservation.Number_of_slots}`;
+              button.setAttribute("data-reservation-id", reservation.reservation_id);
+              button.addEventListener("click", function () {
+                const reservationId = button.getAttribute("data-reservation-id");
+                window.location.href = `/confirmation/${empId}/${reservationId}`;
+              });
+              reservationsList.appendChild(button);
+            }
+          });
+        })
+        .catch(error => console.error("Error:", error));
+    });
+  </script>  
+</body>
+</html>

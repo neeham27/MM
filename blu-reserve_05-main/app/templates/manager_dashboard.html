@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manager Dashboard</title>
+  <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+  <header>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h1>Manager Dashboard</h1>
+    </div>
+  </header>
+  <main>
+    <h1>Welcome!!</h1>
+
+    <!-- BluFunds Details -->
+    <div style="margin-bottom: 2rem; text-align: center;">
+      <h2>Current Funds:</h2>
+      <p id="current-funds" style="font-size: 1.5rem; color: #007bff;">
+        <strong>Loading...</strong> Blu Dollars
+      </p>
+      <h2>Outstanding Funds:</h2>
+      <p id="outstanding-funds" style="font-size: 1.5rem; color: #ff0000;">
+        <strong>Loading...</strong> Blu Dollars
+      </p>
+    </div>
+
+    <!-- Update Funds Section -->
+    <div style="margin-bottom: 2rem; text-align: center;">
+      <h2>Update Funds</h2>
+      <form id="funds-form">
+        <label for="amount">Amount to Add:</label>
+        <input type="number" id="amount" name="amount" required>
+        <button type="submit" style="background: #007bff;color:white;">Update Funds</button>
+      </form>
+    </div>
+
+    <div>
+      <!-- Commented out analytics and booking table -->
+      <!-- <h2>Employee Bookings Analytics:</h2>
+      <ul style="list-style: none; padding: 0; margin-bottom: 1.5rem;">
+        <li><strong>Total Bookings:</strong> {{ total_bookings }}</li>
+        <li><strong>Most Booked Slot:</strong> {{ most_booked_slot }}</li>
+        <li><strong>Most Popular Seating:</strong> {{ popular_seating }}</li>
+      </ul> -->
+
+      <!-- <h2>Booking Details:</h2>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <thead>
+          <tr style="background-color: #007bff; color: white;">
+            <th style="padding: 0.8rem; border: 1px solid #ccc;">Employee Name</th>
+            <th style="padding: 0.8rem; border: 1px solid #ccc;">Date</th>
+            <th style="padding: 0.8rem; border: 1px solid #ccc;">Time</th>
+            <th style="padding: 0.8rem; border: 1px solid #ccc;">Seating</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for booking in bookings %}
+          <tr>
+            <td style="padding: 0.8rem; border: 1px solid #ccc;">{{ booking.employee_name }}</td>
+            <td style="padding: 0.8rem; border: 1px solid #ccc;">{{ booking.date }}</td>
+            <td style="padding: 0.8rem; border: 1px solid #ccc;">{{ booking.time }}</td>
+            <td style="padding: 0.8rem; border: 1px solid #ccc;">{{ booking.seating }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table> -->
+    </div>
+    <!-- Back to Employee Dashboard Button -->
+    <button id="back-to-employee-dashboard" onclick="window.location.href='/dashboard/{{ emp_id }}'" style="background: #007bff; color: white; padding: 8px 16px; border: none; cursor: pointer;">
+      Back to Employee Dashboard
+    </button>
+  </main>
+  <footer>© 2025 Blu-Reserve</footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const empId = "{{ emp_id }}";  // Ensure emp_id is passed from Flask context
+
+      // Fetch BluFunds details for the manager
+      fetch(`/manager/blufunds?emp_id=${empId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status !== "No funds found") {
+            // Update the displayed current funds and outstanding funds
+            document.getElementById("current-funds").innerHTML = `<strong>${data.current_funds}</strong> Blu Dollars`;
+            document.getElementById("outstanding-funds").innerHTML = `<strong>${data.funds_outstanding}</strong> Blu Dollars`;
+          } else {
+            document.getElementById("current-funds").innerHTML = `<strong>Not available</strong>`;
+            document.getElementById("outstanding-funds").innerHTML = `<strong>Not available</strong>`;
+          }
+        })
+        .catch(error => console.error("Error fetching BluFunds:", error));
+
+      // Handle the form submission for updating funds
+      document.getElementById("funds-form").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const amount = document.getElementById("amount").value;
+
+        fetch('/manager/fund_updation', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ emp_id: empId, amount: amount })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status) {
+            alert("Funds updated successfully!");
+            // Re-fetch the updated BluFunds
+            fetch(`/manager/blufunds?emp_id=${empId}`)
+              .then(response => response.json())
+              .then(data => {
+                if (data.status !== "No funds found") {
+                  document.getElementById("current-funds").innerHTML = `<strong>${data.current_funds}</strong> Blu Dollars`;
+                  document.getElementById("outstanding-funds").innerHTML = `<strong>${data.funds_outstanding}</strong> Blu Dollars`;
+                }
+              });
+          } else {
+            alert("Error updating funds.");
+          }
+        })
+        .catch(error => console.error("Error:", error));
+      });
+    });
+  </script>
+</body>
+</html>
